@@ -1,6 +1,6 @@
 [project]
 name = "videomcp-studio"
-version = "0.2.0"
+version = "0.3.0"
 description = "Local-first Video Studio: MCP + Kinocut/FFmpeg + ComfyUI/Wan"
 requires-python = ">=3.11"
 dependencies = [
@@ -10,13 +10,15 @@ dependencies = [
   "httpx>=0.27",
   "pydantic>=2.9",
   "mcp[cli]>=2,<3",
-  "kinocut>=1.16.5,<2"
+  "kinocut>=1.16.5,<2",
+  "bcrypt>=4.2",
+  "itsdangerous>=2.2"
 ]
 
 [project.scripts]
 videomcp-web = "videomcp.app:main"
 videomcp-mcp = "videomcp.mcp_server:main"
-videomcp-doctor = "videomcp.doctor:main"
+videomcp-set-password = "videomcp.auth:main"
 
 [build-system]
 requires = ["hatchling"]
