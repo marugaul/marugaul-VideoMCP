@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "videomcp": {
+      "command": "~/.videomcp/.venv/bin/videomcp-mcp",
+      "args": []
+    },
+    "kinocut": {
+      "command": "~/.videomcp/.venv/bin/kino",
+      "args": ["--mcp"],
+      "env": {
+        "KINOCUT_TOOLS": "all"
+      }
+    }
+  }
+}
