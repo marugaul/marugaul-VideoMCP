@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VideoMCP Studio</title>
+<style>
+:root{--bg:#071b22;--card:#0e2932;--jade:#21c58e;--text:#f5fbfa;--muted:#91abb0}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;background:linear-gradient(135deg,#06171d,#0d3034);color:var(--text)}
+header{padding:24px 32px;border-bottom:1px solid #24434a;display:flex;justify-content:space-between;align-items:center}
+main{max-width:1180px;margin:auto;padding:28px;display:grid;grid-template-columns:1fr 380px;gap:22px}
+.card{background:rgba(14,41,50,.95);border:1px solid #25464d;border-radius:18px;padding:22px;margin-bottom:18px}
+h1,h2{margin-top:0}.brand{font-weight:800}.brand b{color:var(--jade)}
+textarea,input,select{width:100%;background:#071c23;border:1px solid #31515a;border-radius:12px;padding:13px;color:white;margin:8px 0 14px}
+button{background:var(--jade);border:0;border-radius:12px;padding:12px 16px;font-weight:800;cursor:pointer}
+button.secondary{background:#173d46;color:white}.row{display:flex;gap:10px;flex-wrap:wrap}.muted{color:var(--muted)}
+#assets{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.asset{border-radius:12px;overflow:hidden;background:#06171d}.asset img{width:100%;aspect-ratio:9/12;object-fit:cover;display:block}
+.preview{aspect-ratio:9/16;border-radius:20px;background:#031116;display:flex;align-items:center;justify-content:center;overflow:hidden;position:sticky;top:24px}
+.preview video{width:100%;height:100%;object-fit:contain}
+.drop{border:2px dashed #31515a;border-radius:14px;padding:28px;text-align:center}
+@media(max-width:850px){main{grid-template-columns:1fr}.preview{position:relative}}
+</style>
+</head>
+<body>
+<header><div class="brand">Video<b>MCP</b> Studio</div><div id="status" class="muted">verificando…</div></header>
+<main>
+<section>
+<div class="card">
+<h2>1. Decime qué querés crear</h2>
+<textarea id="prompt" rows="4" placeholder="Ej: Reel de 15 segundos para Seguro Viajero. Familia en aeropuerto, sala VIP y avión. Elegante, moderno, vertical."></textarea>
+<div class="row">
+<button onclick="suggest()">Generar storyboard</button>
+<button class="secondary" onclick="searchFromPrompt()">Buscar recursos</button>
+</div>
+<p id="story" class="muted"></p>
+</div>
+
+<div class="card">
+<h2>2. Tus fotos, videos, logos y música</h2>
+<div class="drop">
+<input id="files" type="file" multiple accept="image/*,video/*,audio/*">
+<button onclick="upload()">Subir archivos</button>
+</div>
+<div id="uploaded" class="muted"></div>
+</div>
+
+<div class="card">
+<h2>3. Buscar material gratuito</h2>
+<div class="row"><input id="query" placeholder="aeropuerto familia viaje" style="flex:1"><select id="kind" style="width:150px"><option value="photos">Fotos</option><option value="videos">Videos</option></select><button onclick="searchAssets()">Buscar</button></div>
+<div id="assets"></div>
+</div>
+
+<div class="card">
+<h2>4. Crear Reel</h2>
+<label>Segundos por foto</label><input id="duration" type="number" value="2.5" step=".5" min="1">
+<button onclick="render()">Crear Reel 9:16</button>
+<p class="muted">El montaje final se hace localmente con FFmpeg. ComfyUI/Wan se puede usar como generador opcional.</p>
+</div>
+</section>
+
+<aside><div class="preview" id="preview"><span class="muted">Vista previa 9:16</span></div></aside>
+</main>
+<script>
+let uploaded=[];
+
+async function api(url,opt={}){const r=await fetch(url,opt); if(!r.ok) throw new Error(await r.text()); return r.json()}
+async function health(){const d=await api('/api/health'); document.getElementById('status').textContent=d.comfyui.available?'FFmpeg + ComfyUI listos':'FFmpeg listo · ComfyUI opcional'}
+function suggest(){const p=document.getElementById('prompt').value.trim(); if(!p)return; document.getElementById('story').innerHTML='Storyboard sugerido: <b>Hook</b> → contexto → beneficio → experiencia → cierre/CTA. Usá “Buscar recursos” para conseguir material.'}
+function searchFromPrompt(){document.getElementById('query').value=document.getElementById('prompt').value; searchAssets()}
+async function upload(){const input=document.getElementById('files');const fd=new FormData();for(const f of input.files)fd.append('files',f);const d=await api('/api/upload',{method:'POST',body:fd});uploaded.push(...d.files.map(x=>x.name));document.getElementById('uploaded').textContent='Archivos: '+uploaded.join(', ')}
+async function searchAssets(){const q=document.getElementById('query').value;const kind=document.getElementById('kind').value;const d=await api('/api/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q,kind})});const el=document.getElementById('assets');el.innerHTML='';if(!d.results.length){el.innerHTML='<p class="muted">'+d.note+'</p>';return}d.results.forEach(a=>{const div=document.createElement('div');div.className='asset';div.innerHTML='<img src="'+a.preview+'"><button style="width:100%;border-radius:0" onclick="grab(\''+a.url.replaceAll("'","%27")+'\')">Usar</button>';el.appendChild(div)})}
+async function grab(url){const fd=new FormData();fd.append('url',url);const d=await api('/api/import-url',{method:'POST',body:fd});uploaded.push(d.name);document.getElementById('uploaded').textContent='Archivos: '+uploaded.join(', ')}
+async function render(){if(!uploaded.length){alert('Subí o seleccioná material primero');return}const d=await api('/api/render',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({files:uploaded,seconds_per_image:Number(document.getElementById('duration').value)})});document.getElementById('preview').innerHTML='<video controls autoplay src="'+d.url+'"></video>'}
+health();
+</script>
+</body>
+</html>
